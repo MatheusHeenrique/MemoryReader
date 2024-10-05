@@ -4,8 +4,8 @@
 The `MemoryReader` class is designed to facilitate reading memory from running programs on Windows. This class provides developers with an efficient way to access data from the memory of running processes, which is useful for applications such as real-time monitoring, debugging, game stats reading, and more.
 
 The class has two main methods:
-- **`getFinalAddress(processName, baseOffset, offsets)`**: Calculates and retrieves the final memory address starting from a base address and using a list of pointers.
-- **`readMemory(processName, address, size)`**: Reads the content of a specific memory address after it has been determined, either through a fixed address or by using `getFinalAddress`.
+- **`GetFinalAddress(processName, baseOffset, offsets)`**: Calculates and retrieves the final memory address starting from a base address and using a list of pointers.
+- **`ReadMemory(processName, address, size)`**: Reads the content of a specific memory address after it has been determined, either through a fixed address or by using `GetFinalAddress`.
 
 Please note that reading memory requires appropriate permissions and should be used responsibly to avoid unintended consequences, such as application crashes.
 
@@ -18,7 +18,7 @@ Make sure you run the script with elevated privileges (administrator mode) to ga
 
 ## Methods Description
 
-### `getFinalAddress(processName, baseOffset, offsets)`
+### `GetFinalAddress(processName, baseOffset, offsets)`
 This method calculates the final memory address by navigating through a chain of pointers starting from a base address.
 
 - **`processName`**: The name of the process to connect to, such as `notepad.exe`. This helps identify the target application.
@@ -33,7 +33,7 @@ reader := MemoryReader()
 process := "notepad.exe"
 baseOffset := 0x0537A1CC
 offsets := [0xF0, 0x40, 0x78, 0x48, 0x54, 0xCC, 0x50]
-finalAddress := reader.getFinalAddress(process, baseOffset, offsets)
+finalAddress := reader.GetFinalAddress(process, baseOffset, offsets)
 if (finalAddress)
 {
     MsgBox("Final Address: " . Format("{:#x}", finalAddress))
@@ -44,11 +44,11 @@ else
 }
 ```
 
-### `readMemory(processName, address, size := 4)`
+### `ReadMemory(processName, address, size := 4)`
 This method reads the value stored at a given memory address.
 
 - **`processName`**: The name of the process to connect to, such as `notepad.exe`.
-- **`address`**: The specific memory address to read (e.g., `0x0537A1CC`). You can use an address obtained from `getFinalAddress`.
+- **`address`**: The specific memory address to read (e.g., `0x0537A1CC`). You can use an address obtained from `GetFinalAddress`.
 - **`size`**: The number of bytes to read (default is 4 bytes).
 
 This function is useful for accessing real-time data from a running process, which could include game statistics, configuration values, or other internal data.
@@ -57,8 +57,8 @@ This function is useful for accessing real-time data from a running process, whi
 ```ahk
 reader := MemoryReader()
 process := "notepad.exe"
-address := 0x0537A1CC ; This could also be the result of getFinalAddress()
-value := reader.readMemory(process, address)
+address := 0x0537A1CC ; This could also be the result of GetFinalAddress()
+value := reader.ReadMemory(process, address)
 if (value)
 {
     MsgBox("Value at Address: " . value)
@@ -78,10 +78,10 @@ process := "notepad.exe"
 baseOffset := 0x0537A1CC
 offsets := [0xF0, 0x40, 0x78]
 
-finalAddress := reader.getFinalAddress(process, baseOffset, offsets)
+finalAddress := reader.GetFinalAddress(process, baseOffset, offsets)
 if (finalAddress)
 {
-    value := reader.readMemory(process, finalAddress)
+    value := reader.ReadMemory(process, finalAddress)
     if (value)
     {
         MsgBox("Value at Final Address: " . value)
@@ -105,7 +105,7 @@ else
 Reading or modifying the memory of a program can lead to unintended consequences, such as crashes or data corruption. Always test in a safe environment and avoid using these techniques on applications without permission. Unauthorized memory manipulation may violate software terms of service or local laws, so proceed responsibly.
 
 ## FAQ
-**Q: Why does `getFinalAddress` return 0?**
+**Q: Why does `GetFinalAddress` return 0?**
 - This could be because the target process is not running, or the provided offsets are incorrect.
 
 **Q: What permissions are needed to read memory?**
