@@ -1,21 +1,21 @@
 #Requires AutoHotkey v2.0
 
 class MemoryReader {
-    GetFinalAddress(processName, baseOffset, offsets) {
+    GetFinalAddress(processName, baseOffset, offsets, moduleName := "") {
         pid := WinGetPID("ahk_exe " . processName)
         if (!pid) {
             MsgBox("Processo não encontrado.")
             return 0
         }
 
-        ; Open the process with full access (PROCESS_ALL_ACCESS)
+        ; Abrir o processo com acesso total (PROCESS_ALL_ACCESS)
         hProcess := DllCall("OpenProcess", "UInt", 0x001F0FFF, "Int", false, "UInt", pid, "Ptr")
         if (!hProcess) {
             MsgBox("Falha ao abrir o processo com acesso total.")
             return 0
         }
 
-        snapFlags := 0x00000008 | 0x00000010
+        snapFlags := 0x00000008 | 0x00000010  ; TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32
         hSnapshot := DllCall("CreateToolhelp32Snapshot", "UInt", snapFlags, "UInt", pid, "Ptr")
         if (hSnapshot == -1) {
             MsgBox("Falha ao criar snapshot.")
@@ -23,7 +23,7 @@ class MemoryReader {
             return 0
         }
 
-        ; Adjustments for compatibility between 32 and 64 bits
+        ; Ajustes para compatibilidade entre 32 e 64 bits
         if (A_PtrSize == 8) {
             moduleEntrySize := 1080
             offset_modBaseAddr := 24
@@ -41,7 +41,14 @@ class MemoryReader {
         found := false
         while (result) {
             szModule := StrGet(moduleEntry.Ptr + offset_szModule, "UTF-8")
-            if (szModule == processName) {
+            ; Se moduleName não for fornecido, usar processName
+            if (moduleName = "") {
+                targetModule := processName
+            } else {
+                targetModule := moduleName
+            }
+
+            if (szModule == targetModule) {
                 found := true
                 modBaseAddr := NumGet(moduleEntry, offset_modBaseAddr, "Ptr")
                 break
@@ -75,7 +82,7 @@ class MemoryReader {
     }
 
     ReadPointer(hProcess, address) {
-        bufferx := Buffer(4)  ; Ensure reading 32 bits
+        bufferx := Buffer(4)  ; Garante a leitura de 32 bits
         result := DllCall("ReadProcessMemory", "Ptr", hProcess, "Ptr", address, "Ptr", bufferx, "UInt", 4, "Ptr", 0)
         if (!result) {
             return 0
