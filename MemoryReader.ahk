@@ -1,7 +1,7 @@
 #Requires AutoHotkey v2.0
 
 class MemoryReader {
-    GetFinalAddress(processName, baseOffset, offsets, moduleName := "") {
+    getFinalAddress(processName, baseOffset, offsets, moduleName := "") {
         pid := WinGetPID("ahk_exe " . processName)
         if (!pid) {
             MsgBox("Processo não encontrado.")
@@ -39,14 +39,11 @@ class MemoryReader {
 
         result := DllCall("Module32First", "Ptr", hSnapshot, "Ptr", moduleEntry, "Int")
         found := false
+
         while (result) {
             szModule := StrGet(moduleEntry.Ptr + offset_szModule, "UTF-8")
             ; Se moduleName não for fornecido, usar processName
-            if (moduleName = "") {
-                targetModule := processName
-            } else {
-                targetModule := moduleName
-            }
+            targetModule := moduleName != "" ? moduleName : processName
 
             if (szModule == targetModule) {
                 found := true
@@ -68,7 +65,7 @@ class MemoryReader {
         currentAddress := initialAddress
 
         for offset in offsets {
-            value := this.ReadPointer(hProcess, currentAddress)
+            value := this.readPointer(hProcess, currentAddress)
             if (value == 0 || value > 0x7FFFFFFF) {
                 MsgBox("Falha ao ler memória no endereço " . Format("{:#x}", currentAddress))
                 DllCall("CloseHandle", "Ptr", hProcess)
@@ -81,7 +78,7 @@ class MemoryReader {
         return currentAddress
     }
 
-    ReadPointer(hProcess, address) {
+    readPointer(hProcess, address) {
         bufferx := Buffer(4)  ; Garante a leitura de 32 bits
         result := DllCall("ReadProcessMemory", "Ptr", hProcess, "Ptr", address, "Ptr", bufferx, "UInt", 4, "Ptr", 0)
         if (!result) {
@@ -90,7 +87,16 @@ class MemoryReader {
         return NumGet(bufferx, 0, "UInt")
     }
 
-    ReadMemory(processName, address, tamanho := 4) {
+    /*
+        Parâmetros de readMemory:
+        - processName: Nome do processo (ex.: "exemplo.exe")
+        - address: Endereço de memória a ler
+        - size: Quantidade de bytes a serem lidos (padrão = 4)
+        - dataType: Tipo de dado a ler ("int" ou "string"; padrão = "int")
+          Se "int", usará NumGet (4 ou 8 bytes, dependendo de size).
+          Se "string", usará StrGet no buffer lido.
+    */
+    readMemory(processName, address, size := 4, dataType := "int") {
         pid := WinGetPID("ahk_exe " . processName)
         if (!pid) {
             MsgBox("Processo não encontrado.")
@@ -103,8 +109,8 @@ class MemoryReader {
             return
         }
 
-        bufferx := Buffer(tamanho)
-        result := DllCall("ReadProcessMemory", "Ptr", hProcess, "Ptr", address, "Ptr", bufferx, "Ptr", tamanho, "Ptr", 0)
+        bufferx := Buffer(size)
+        result := DllCall("ReadProcessMemory", "Ptr", hProcess, "Ptr", address, "Ptr", bufferx, "Ptr", size, "Ptr", 0)
 
         if (!result) {
             MsgBox("Falha ao ler a memória no endereço " . Format("{:#x}", address))
@@ -112,9 +118,19 @@ class MemoryReader {
             return
         }
 
-        valor := NumGet(bufferx, 0, tamanho == 8 ? "Int64" : "Int")
-        DllCall("CloseHandle", "Ptr", hProcess)
+        if (dataType = "string") {
+            ; Interpreta o conteúdo do buffer como string (UTF-8 ou outro encoding conforme necessidade)
+            valor := StrGet(bufferx, "UTF-8")
+        } else {
+            ; Mantém funcionamento original para valores numéricos
+            if (size = 8) {
+                valor := NumGet(bufferx, 0, "Int64")
+            } else {
+                valor := NumGet(bufferx, 0, "Int")
+            }
+        }
 
+        DllCall("CloseHandle", "Ptr", hProcess)
         return valor
     }
 }
